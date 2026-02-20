@@ -74,10 +74,10 @@ Below is the exact architecture used in the notebook.
 
 ---
 
-## VAE Architecture Diagram (Matches PyTorch Code)
+## VAE Architecture Diagram (Vertical)
 
 ```mermaid
-flowchart LR
+flowchart TD
 
   X["Input 6075"]
 
@@ -89,8 +89,10 @@ flowchart LR
   E2 --> BN2["BatchNorm 1000"]
   BN2 --> R2["ReLU"]
 
-  R2 --> MU["Linear to mu"]
-  R2 --> LV["Linear to logvar"]
+  R2 --> SPLIT["Shared Representation 1000"]
+
+  SPLIT --> MU["Linear to mu (dim_z)"]
+  SPLIT --> LV["Linear to logvar (dim_z)"]
 
   MU --> Z["Reparameterization"]
   LV --> Z
@@ -209,3 +211,4 @@ Why AE matters in this project:
 - `AE_vs_VAE_Explained.svg`
 - `AES.svg`
 - `README.md`
+
