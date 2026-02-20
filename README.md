@@ -3,25 +3,6 @@
 Main notebook:
 - `lfw-face-generation-latent-editing.ipynb`
 
-Dataset:
-- https://www.kaggle.com/datasets/jessicali9530/lfw-dataset
-
-## Why AE and VAE
-
-Autoencoders (AE) are great for learning compact representations that reconstruct inputs well. Variational Autoencoders (VAE) add a probabilistic latent space (`mu`, `logvar`) and a KL regularization term that encourages smooth, structured sampling. For this project, the VAE is used in training because it supports more reliable generation and smoother latent edits while still preserving reconstruction quality.
-
-Key differences:
-- **AE**: deterministic latent code, optimized only for reconstruction.
-- **VAE**: stochastic latent code, optimized for reconstruction + KL divergence to a prior, enabling better sampling and interpolation.
-
-## Workflow
-
-1. Data discovery and preprocessing (LFW images + attributes).
-2. Train a VAE on 45x45 RGB faces (latent dim = 100).
-3. Evaluate reconstructions and generation quality.
-4. Analyze the latent space (PCA, t-SNE, interpolation).
-5. Attribute edits (smile, sunglasses) by latent vector arithmetic.
-
 ## Notebook Flow (Mermaid)
 
 ```mermaid
@@ -30,51 +11,96 @@ flowchart TD
   B --> C[Train/Val Split]
   C --> D[VAE Training]
   D --> E[Reconstruction Diagnostics]
-  D --> F[Random Generation]
+  D --> F[Random Face Generation]
   D --> G[Latent Interpolation]
-  D --> H[PCA / t-SNE Latent Projections]
-  D --> I[Attribute Directions + Edits]
+  D --> H[PCA and t-SNE Latent Analysis]
+  D --> I[Smile and Sunglasses Latent Editing]
 ```
 
-## VAE Architecture Used
+## Dataset Introduction
 
-- Input: `45 x 45 x 3 = 6075`
-- Encoder: `6075 -> 1500 -> 1000`
-- Latent: `mu, logvar -> 100`
-- Decoder: `100 -> 1000 -> 1500 -> 6075` (Sigmoid output)
+This project uses the **Labeled Faces in the Wild (LFW)** dataset:
+- Dataset link: https://www.kaggle.com/datasets/jessicali9530/lfw-dataset
+- Data used in notebook:
+- RGB face images
+- Face-level attributes (for example: smiling, eyeglasses, sunglasses)
 
-```mermaid
-flowchart LR
-  X[Input 6075] --> E1[Linear 1500]
-  E1 --> E2[Linear 1000]
-  E2 --> MU[mu (100)]
-  E2 --> LV[logvar (100)]
-  MU --> Z[Reparameterize z]
-  LV --> Z
-  Z --> D1[Linear 1000]
-  D1 --> D2[Linear 1500]
-  D2 --> O[Output 6075]
-```
+The notebook aligns image files with attribute rows, crops/resizes faces to `45x45`, normalizes pixel values, and prepares train/validation splits.
 
-## SVG Diagrams
+## What We Are Doing Here
+
+The goal is to learn a latent representation of faces that supports:
+- faithful reconstruction,
+- realistic sampling/generation,
+- controllable semantic edits (smile, sunglasses).
+
+The final training path in this notebook is **VAE-focused**, because it gives a smoother and more structured latent space for generation and editing.
+
+## Autoencoder (AE) Diagram
 
 ![Autoencoder](AES.svg)
-![Dense AE Architecture](Dense_AE_Architecture.svg)
+
+Autoencoders compress an input image into a latent vector and decode it back to reconstruct the same image.
+
+Why AE matters in this project:
+- It defines the core encoder-decoder idea.
+- It is the conceptual baseline before moving to probabilistic latent modeling.
+
+
+
+## AE vs VAE and Differences
+
 ![AE vs VAE Explained](AE_vs_VAE_Explained.svg)
-![AE Diagram](AE.svg)
-![AES Diagram](AES.svg)
-![AutoEncoders Diagram](AutoEncoders.svg)
-![VAE vs AE](VAE_vs_AE.svg)
+
+
+Key differences:
+- **AE**:
+- deterministic latent vector,
+- reconstruction-only objective.
+- **VAE**:
+- latent distribution (`mu`, `logvar`) + reparameterization,
+- reconstruction loss + KL divergence,
+- better latent smoothness for interpolation and generation.
+
+## How Each Flow Step Is Implemented
+
+1. `Load + Preprocess`
+- Read LFW and attributes, align rows, resize to `45x45`, normalize.
+
+2. `Train/Val Split`
+- Create train and validation tensors for stable evaluation.
+
+3. `VAE Training`
+- Train encoder/decoder with reconstruction + KL objective.
+
+4. `Reconstruction Diagnostics`
+- Compare originals vs reconstructions, inspect error maps, and SSIM.
+
+5. `Random Generation`
+- Sample latent vectors and decode to new synthetic faces.
+
+6. `Interpolation`
+- Interpolate between two latent points to test latent continuity.
+
+7. `Latent Analysis`
+- Use PCA/t-SNE to inspect structure of learned latent embeddings.
+
+8. `Attribute Editing`
+- Build smile/sunglasses directions and apply latent vector arithmetic.
+
+## How To Use This For Your Use Case
+
+Use this notebook as a template when you need controllable face generation/editing:
+
+1. Replace dataset paths with your own face dataset + attributes.
+2. Keep the same preprocessing contract (`45x45` RGB or adjust model input dims accordingly).
+3. Train VAE and monitor both reconstruction and KL components.
+4. Define your own semantic directions from attributes (for example: age, beard, glasses).
+5. Use latent edits for controlled augmentation or interactive generation workflows.
 
 ## Included Files
 
 - `lfw-face-generation-latent-editing.ipynb`
-- `Autoencoder.svg`
-- `Dense_AE_Architecture.svg`
 - `AE_vs_VAE_Explained.svg`
-- `AE.svg`
 - `AES.svg`
-- `AutoEncoders.svg`
-- `VAE_vs_AE.svg`
 - `README.md`
-
