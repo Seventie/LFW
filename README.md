@@ -1,6 +1,4 @@
-﻿# LFW Face Generation and Latent Editing
-
-This project implements an end-to-end pipeline for **face reconstruction** and **semantic latent editing** on the Labeled Faces in the Wild (LFW) dataset.
+# LFW Face Generation and Latent Attribute Editing
 
 Main notebook:
 - `lfw-face-generation-latent-editing.ipynb`
@@ -8,115 +6,74 @@ Main notebook:
 Dataset:
 - https://www.kaggle.com/datasets/jessicali9530/lfw-dataset
 
----
+## Why AE and VAE
 
-## Project Goal
+Autoencoders (AE) are great for learning compact representations that reconstruct inputs well. Variational Autoencoders (VAE) add a probabilistic latent space (`mu`, `logvar`) and a KL regularization term that encourages smooth, structured sampling. For this project, the VAE is used in training because it supports more reliable generation and smoother latent edits while still preserving reconstruction quality.
 
-I built this notebook to answer three core questions:
+Key differences:
+- **AE**: deterministic latent code, optimized only for reconstruction.
+- **VAE**: stochastic latent code, optimized for reconstruction + KL divergence to a prior, enabling better sampling and interpolation.
 
-1. Can a dense autoencoder learn compact identity-aware facial representations from LFW?
-2. Can latent-space arithmetic produce interpretable edits such as smiles and sunglasses?
-3. Can I explain model behavior with transparent diagnostics (error maps, SSIM, latent projections)?
+## Workflow
 
----
+1. Data discovery and preprocessing (LFW images + attributes).
+2. Train a VAE on 45x45 RGB faces (latent dim = 100).
+3. Evaluate reconstructions and generation quality.
+4. Analyze the latent space (PCA, t-SNE, interpolation).
+5. Attribute edits (smile, sunglasses) by latent vector arithmetic.
 
-## Concept Diagrams
-
-### 1. Autoencoder intuition
-
-![Autoencoder Concept](Autoencoder.svg)
-
-### 2. Autoencoder vs Variational Autoencoder
-
-![AE vs VAE](VAE_vs_AE.svg)
-
-### 3. Architecture and objective summary used in this notebook
-
-![Dense AE Architecture](Dense_AE_Architecture.svg)
-
----
-
-## End-to-End Workflow (Detailed)
+## Notebook Flow (Mermaid)
 
 ```mermaid
 flowchart TD
-    A[Define Objective\nFace reconstruction + latent editing] --> B[Load LFW dataset\nImages + metadata]
-    B --> C[Data Discovery\nIdentity frequency + random sample audit]
-    C --> D[Attribute Alignment\nMerge image paths with attributes]
-    D --> E[Preprocessing\nCrop -> Resize 45x45 -> Normalize]
-    E --> F[Train/Validation Split\nPrepare tensors for modeling]
-
-    F --> G[Dense Autoencoder Model\nEncoder 6075-1500-1000-100\nDecoder 100-1000-1500-6075]
-    G --> H[Training Protocol\nMSE + Adam(lr=0.001)\n50 epochs, batch size 64]
-
-    H --> I[Learning Diagnostics\nTrain/Val loss curves\nGeneralization behavior]
-    I --> J[Reconstruction Analysis\nOriginal vs reconstructed\nError maps + SSIM]
-    J --> K[Latent Sampling\nGenerate faces from random z]
-
-    K --> L[Attribute Buckets\nSmile / No-smile / Glasses subsets]
-    L --> M[Latent Vector Arithmetic\nConstruct semantic directions]
-    M --> N[Apply Edits\nSmile and sunglasses transformations]
-
-    N --> O[Latent Interpretability\nInterpolation + PCA + t-SNE]
-    O --> P[Direction Validation\nClassifier-derived direction\nvs mean-difference direction]
-    P --> Q[Final Conclusions\nBehavior, limits, and next steps]
+  A[Load LFW Images + Attributes] --> B[Preprocess: crop, resize 45x45, normalize]
+  B --> C[Train/Val Split]
+  C --> D[VAE Training]
+  D --> E[Reconstruction Diagnostics]
+  D --> F[Random Generation]
+  D --> G[Latent Interpolation]
+  D --> H[PCA / t-SNE Latent Projections]
+  D --> I[Attribute Directions + Edits]
 ```
 
----
+## VAE Architecture Used
 
-## What I Implemented
+- Input: `45 x 45 x 3 = 6075`
+- Encoder: `6075 -> 1500 -> 1000`
+- Latent: `mu, logvar -> 100`
+- Decoder: `100 -> 1000 -> 1500 -> 6075` (Sigmoid output)
 
-### Data and preprocessing
-- Kaggle path-based loading of LFW images.
-- Identity-frequency EDA to inspect class imbalance.
-- Attribute-aligned image pipeline.
-- Face-region crop and resize to `45 x 45`.
-- Normalization to `[0, 1]` and train/validation split.
+```mermaid
+flowchart LR
+  X[Input 6075] --> E1[Linear 1500]
+  E1 --> E2[Linear 1000]
+  E2 --> MU[mu (100)]
+  E2 --> LV[logvar (100)]
+  MU --> Z[Reparameterize z]
+  LV --> Z
+  Z --> D1[Linear 1000]
+  D1 --> D2[Linear 1500]
+  D2 --> O[Output 6075]
+```
 
-### Model and training
-- Dense autoencoder with latent dimension `100`.
-- Symmetric encoder-decoder design.
-- Training objective: **MSE reconstruction loss**.
-- Optimizer: **Adam (lr=0.001)**.
-- Training schedule: **50 epochs**, **batch size 64**.
+## SVG Diagrams
 
-### Evaluation and analysis
-- Reconstruction side-by-side visualization.
-- Pixel-level error maps.
-- SSIM score reporting (if `scikit-image` available).
-- Random latent sampling for synthetic face generation.
+![Autoencoder](Autoencoder.svg)
+![Dense AE Architecture](Dense_AE_Architecture.svg)
+![AE vs VAE Explained](AE_vs_VAE_Explained.svg)
+![AE Diagram](AE.svg)
+![AES Diagram](AES.svg)
+![AutoEncoders Diagram](AutoEncoders.svg)
+![VAE vs AE](VAE_vs_AE.svg)
 
-### Latent editing and interpretation
-- Built attribute subsets (smiling/non-smiling/eyeglasses/sunglasses).
-- Computed latent directions by vector differences.
-- Applied controllable edits by moving samples in latent space.
-- Added latent interpolation to verify manifold continuity.
-- Added PCA/t-SNE for latent-space structure analysis.
-- Compared mean-difference edit direction with classifier-derived direction.
+## Included Files
 
----
-
-## File Structure
-
-- `lfw-face-generation-latent-editing.ipynb` : Main implementation notebook
-- `README.md` : Project explanation and workflow
-- `Autoencoder.svg` : Autoencoder concept figure
-- `VAE_vs_AE.svg` : AE vs VAE comparison figure
-- `Dense_AE_Architecture.svg` : Model and objective figure
-
----
-
-## Notes
-
-- The notebook is structured for Kaggle execution.
-- SVG images are embedded directly in markdown sections.
-- SSIM outputs appear only if `skimage` is installed.
-
----
-
-## Possible Extensions
-
-1. Replace dense AE with convolutional AE or VAE and compare latent smoothness.
-2. Add identity-preservation metrics (embedding similarity) for edit quality.
-3. Introduce disentanglement constraints for cleaner attribute control.
-4. Add threshold calibration on a dedicated validation split.
+- `lfw-face-generation-latent-editing.ipynb`
+- `Autoencoder.svg`
+- `Dense_AE_Architecture.svg`
+- `AE_vs_VAE_Explained.svg`
+- `AE.svg`
+- `AES.svg`
+- `AutoEncoders.svg`
+- `VAE_vs_AE.svg`
+- `README.md`
