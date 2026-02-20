@@ -58,7 +58,7 @@ flowchart LR
 
 ## SVG Diagrams
 
-![Autoencoder](Autoencoder.svg)
+![Autoencoder](AES.svg)
 ![Dense AE Architecture](Dense_AE_Architecture.svg)
 ![AE vs VAE Explained](AE_vs_VAE_Explained.svg)
 ![AE Diagram](AE.svg)
@@ -77,3 +77,4 @@ flowchart LR
 - `AutoEncoders.svg`
 - `VAE_vs_AE.svg`
 - `README.md`
+
